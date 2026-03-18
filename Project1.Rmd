@@ -30,11 +30,27 @@ Your job in this project falls into two categories:
     * Call the second table `gas`: "./data/dutch_ttf_natural_gas.csv". Be sure to properly import the `Date` column.
     * Demonstrate that these have been loaded by showing the number of rows and columns in each table.
   
+```{r task1}
+# Load the daily natural gas data
+daily <- read.csv("./data/natural_gas_germany_daily.csv")
 
+# Load the Dutch TTF natural gas data, properly importing the Date column
+gas <- read.csv("./data/dutch_ttf_natural_gas.csv")
+gas$Date <- as.Date(gas$Date, format = "%m/%d/%Y")
+
+# Demonstrate loading by showing dimensions of each table
+cat("daily: ", nrow(daily), "rows and", ncol(daily), "columns\n")
+cat("gas:   ", nrow(gas),   "rows and", ncol(gas),   "columns\n")
+```
 ### Task 2
 
 * The data in `daily` are collected over days, with information on different types of natural gas consumption (`consumption_small`, `consumption_industry`, `consumption_power`). Provide summaries of typical values for each of these three types of consumption.
 
+```{r task2}
+daily %>%
+  select(consumption_small, consumption_industry, consumption_power) %>%
+  summary()
+```
 
 ### Task 3
 
@@ -44,13 +60,98 @@ Answer some questions about the data in `daily`:
 * What is the percentage change in the `consumption_*` variables (that is the last day minus the first day divided by the first day)?
 * What proportion of the days are marked as holidays?
 * For each month in each year, what was the year-month combination with the lowest median `consumption_power` value?
-   
+
+```{r task3}
+# Convert date column
+daily <- daily %>%
+  mutate(date = as.Date(date))
+
+# How many weeks do the data cover?
+n_weeks <- as.numeric(difftime(max(daily$date), min(daily$date), units = "weeks"))
+cat("Weeks covered:", round(n_weeks, 1), "\n")
+
+# Percentage change for each consumption variable
+pct_change <- function(x) (last(x) - first(x)) / first(x) * 100
+
+daily %>%
+  summarise(
+    pct_small    = pct_change(consumption_small),
+    pct_industry = pct_change(consumption_industry),
+    pct_power    = pct_change(consumption_power)
+  )
+
+# Proportion of days marked as holidays
+daily %>%
+  summarise(prop_holiday = mean(holiday == 1, na.rm = TRUE))
+
+# Year-month combination with lowest median consumption_power
+daily %>%
+  mutate(year  = year(date),
+         month = month(date)) %>%
+  group_by(year, month) %>%
+  summarise(median_power = median(consumption_power, na.rm = TRUE),
+            .groups = "drop") %>%
+  slice_min(median_power, n = 1)
+```
 ### Task 4
 
 * The original paper aggregated the data to monthly means for each consumption type in `daily` and the `Price` column of `gas` to produce the following image:<br/>
 ![Original consumption by month graph](proj1fig1.png)<br/>
 Produce plots that show the same information that is presented in this plot. Your plots do not have to have the same colors or markings, but we should be able to use them to compare the trends for the three price variables. 
 
+
+```{r task4}
+# Aggregate daily to monthly means
+daily_monthly <- daily %>%
+  mutate(year  = year(date),
+         month = month(date),
+         year_month = make_date(year, month, 1)) %>%
+  group_by(year_month) %>%
+  summarise(
+    consumption_small    = mean(consumption_small,    na.rm = TRUE),
+    consumption_industry = mean(consumption_industry, na.rm = TRUE),
+    consumption_power    = mean(consumption_power,    na.rm = TRUE),
+    .groups = "drop"
+  )
+
+# Aggregate gas to monthly mean price
+gas_monthly <- gas %>%
+  mutate(year_month = make_date(year(Date), month(Date), 1)) %>%
+  group_by(year_month) %>%
+  summarise(Price = mean(Price, na.rm = TRUE), .groups = "drop")
+
+# Pivot consumption to long format for faceting
+daily_long <- daily_monthly %>%
+  pivot_longer(cols = starts_with("consumption"),
+               names_to  = "type",
+               values_to = "consumption") %>%
+  mutate(type = recode(type,
+    "consumption_small"    = "Small Consumers",
+    "consumption_industry" = "Industry",
+    "consumption_power"    = "Power Stations"
+  ))
+
+# Plot consumption by month
+p1 <- ggplot(daily_long, aes(x = year_month, y = consumption, color = type)) +
+  geom_line() +
+  geom_point(size = 1) +
+  facet_wrap(~ type, ncol = 1, scales = "free_y") +
+  labs(title = "Monthly Mean Natural Gas Consumption by Sector",
+       x = "Month", y = "Mean Consumption") +
+  theme_bw() +
+  theme(legend.position = "none")
+
+# Plot gas price by month
+p2 <- ggplot(gas_monthly, aes(x = year_month, y = Price)) +
+  geom_line(color = "darkred") +
+  geom_point(size = 1, color = "darkred") +
+  labs(title = "Monthly Mean Dutch TTF Natural Gas Price",
+       x = "Month", y = "Mean Price (EUR/MWh)") +
+  theme_bw()
+
+p1
+p2
+```
 ### Task 5
 
 * Write a predicate function that returns true if any value in vector is missing. Use this function to find columns with missing values in the `daily` column. Create a plot or table that shows how often patterns of missingness occur: are all of the missing values in the same rows or are the various columns missing data in different ways?
