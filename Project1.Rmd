@@ -228,6 +228,24 @@ print(summary_table)
 
 * There are several variables that pull out data by different industry (the `_idx` columns). Create a table for these columns using `select` and the `ends_with` function. Provide two different plots that show of the relations between these variables (you do not need to have all variables in each plot).
 
+```{r task8}
+# Select columns that end with '_idx'
+industry_idx <- daily %>% select(ends_with("_idx"))
+# Plot 1: Scatter plot of hospitality_idx vs price_industry_idx
+p1 <- ggplot(daily, aes(x = hospitality_idx, y = price_industry_idx)) +
+  geom_point(alpha = 0.5) +
+  labs(title = "Hospitality Index vs Price Index",
+       x = "Hospitality Index", y = "Price Industry Index") +
+  theme_bw()
+# Plot 2: Scatter plot of retail_idx vs price_households_idx
+p2 <- ggplot(daily, aes(x = retail_idx, y = price_households_idx)) +
+  geom_point(alpha = 0.5) +
+  labs(title = "Retail Index vs Price Households Index",
+       x = "Retail Indx", y = "Price Households Index") +
+  theme_bw() + theme(legend.position = "none")
+p1 
+p2
+```
 
 ## Objectives
 
