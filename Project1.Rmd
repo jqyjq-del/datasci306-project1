@@ -179,6 +179,26 @@ print(missing_pattern)
 
 * Limit the `gas` table to days where the price exceeded the yearly median. Use the concept of [circular means](https://en.wikipedia.org/wiki/Circular_mean) to compute the average day of the year when price exceeds the yearly median price. The `yday` function will likely be useful here. 
 
+```{r task6}
+# Calculate yearly median price
+gas <- gas %>%
+  mutate(year = year(Date)) %>%
+  group_by(year) %>%
+  mutate(median_price = median(Price, na.rm = TRUE)) %>%
+  ungroup()
+# Filter to days where price exceeds yearly median
+gas_high <- gas %>%
+  filter(Price > median_price)
+# Calculate circular mean of day of year for high price days
+gas_high <- gas_high %>% mutate(day_of_year = yday(Date))
+# Convert day of year to radians for circular mean calculation
+gas_high <- gas_high %>% mutate(angle = day_of_year / 365 * 2 * pi)
+# Calculate circular mean
+circular_mean_angle <- atan2(mean(sin(gas_high$angle)), mean(cos(gas_high$angle)))
+# Convert back to day of year
+circular_mean_day <- circular_mean_angle / (2 * pi) * 365
+cat("Average day of year when price exceeds yearly median:", round(circular_mean_day), "\n")
+```
 
 ### Task 7
 
