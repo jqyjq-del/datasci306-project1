@@ -156,7 +156,24 @@ p2
 
 * Write a predicate function that returns true if any value in vector is missing. Use this function to find columns with missing values in the `daily` column. Create a plot or table that shows how often patterns of missingness occur: are all of the missing values in the same rows or are the various columns missing data in different ways?
 
-
+```{r task5}
+# Predicate function to check for any missing values
+has_missing <- function(x) any(is.na(x))
+# Find columns with missing values
+missing_cols <- sapply(daily, has_missing)
+cat("Columns with missing values:", names(missing_cols)[missing_cols], "\n")
+# Create a table of missingness patterns
+missing_pattern <- daily %>%
+  select(where(has_missing)) %>%
+  mutate(row_id = row_number()) %>%
+  pivot_longer(cols = -row_id, names_to = "variable", values_to =
+    "is_missing") %>%
+  group_by(variable, is_missing) %>%
+  summarise(count = n(), .groups = "drop") %>%
+  pivot_wider(names_from = is_missing, values_from = count, values_fill =
+    list(count = 0)) 
+print(missing_pattern)
+```
 
 ### Task 6
 
