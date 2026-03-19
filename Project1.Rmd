@@ -204,6 +204,26 @@ cat("Average day of year when price exceeds yearly median:", round(circular_mean
 
 * Using the cut function, create two nominal variables from quantitative data in the `daily` dataset. Use these groups to summarize the data. Use arrange to show the smallest or largest values in these comparisons.
 
+```{r task7}
+# Create two nominal variables using cut function
+daily <- daily %>%
+  mutate(
+    temp_group = cut(temperature, breaks = c(-Inf, 0, 15, Inf), labels = c("Cold", "Mild", "Hot")),
+    solar_group = cut(solar_radiation, breaks = c(-Inf, 100, 300, Inf), labels = c("Low", "Medium", "High"))
+  )
+# Summarize data by temp_group and solar_group
+summary_table <- daily %>%
+  group_by(temp_group, solar_group) %>%
+  summarise(
+    mean_consumption_small = mean(consumption_small, na.rm = TRUE),
+    mean_consumption_industry = mean(consumption_industry, na.rm = TRUE),
+    mean_consumption_power = mean(consumption_power, na.rm = TRUE),
+    .groups = "drop"
+  ) %>%
+  arrange(mean_consumption_small)
+print(summary_table)
+```
+
 ### Task 8
 
 * There are several variables that pull out data by different industry (the `_idx` columns). Create a table for these columns using `select` and the `ends_with` function. Provide two different plots that show of the relations between these variables (you do not need to have all variables in each plot).
