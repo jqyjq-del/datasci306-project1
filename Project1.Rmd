@@ -1,7 +1,10 @@
 ---
 title: "Project 1"
 author: "GROUP MEMBERS"
-output: html_document
+output:
+  pdf_document: default
+  html_document: default
+  word_document: default
 ---
 
 ```{r setup, include=FALSE}
@@ -258,34 +261,332 @@ p2
     * A plot using `facet_wrap` or `facet_grid`
     * A plot that shows seasonal effects before the crisis (September 2021 until October 2022)
     
+The following five figures provide additional insights into the natural gas data beyond the required tasks.
+
+#### Figure 1: Marginal distribution of household gas consumption
+    
+```{r objective1_fig1}
+ggplot(daily, aes(x = consumption_small)) +
+  geom_histogram(bins = 30, fill = "steelblue", color = "white") +
+  labs(
+    title = "Distribution of Household Gas Consumption",
+    x = "Household Gas Consumption",
+    y = "Count"
+  ) +
+  theme_bw()
+```
+
+This histogram shows the marginal distribution of household gas consumption. Most days have moderate consumption levels, but there are also some relatively high-consumption days, creating a slight right-skew.
+
+#### Figure 2: Joint distribution of temperature and household gas consumption
+
+```{r}
+ggplot(daily, aes(x = temperature, y = consumption_small)) +
+  geom_point(alpha = 0.35) +
+  geom_smooth(method = "loess", se = FALSE) +
+  labs(
+    title = "Household Consumption and Temperature",
+    x = "Temperature",
+    y = "Household Gas Consumption"
+  ) +
+  theme_bw()
+```
+
+This plot shows a negative relationship between temperature and household gas consumption. As temperature increases, household gas consumption tends to decrease, which is consistent with heating demand being higher on colder days.
+
+#### Figure 3: Conditional mean of household consumption by temperature group
+
+```{r}
+daily %>%
+  group_by(temp_group) %>%
+  summarise(mean_small = mean(consumption_small, na.rm = TRUE)) %>%
+  ggplot(aes(x = temp_group, y = mean_small)) +
+  geom_col(fill = "orange") +
+  labs(
+    title = "Mean Household Consumption by Temperature Group",
+    x = "Temperature Group",
+    y = "Mean Household Gas Consumption"
+  ) +
+  theme_bw()
+```
+
+This bar chart shows the conditional mean of household gas consumption for each temperature group. Household gas consumption is highest on cold days and lowest on hot days, confirming that temperature strongly affects residential gas demand.
+
+#### Figure 4: Faceted comparison across sectors
+
+```{r}
+daily %>%
+  pivot_longer(
+    cols = c(consumption_small, consumption_industry, consumption_power),
+    names_to = "sector",
+    values_to = "consumption"
+  ) %>%
+  mutate(
+    sector = recode(
+      sector,
+      consumption_small = "Households",
+      consumption_industry = "Industry",
+      consumption_power = "Power Stations"
+    )
+  ) %>%
+  ggplot(aes(x = temperature, y = consumption)) +
+  geom_point(alpha = 0.25) +
+  geom_smooth(method = "loess", se = FALSE) +
+  facet_wrap(~ sector, scales = "free_y") +
+  labs(
+    title = "Temperature and Consumption by Sector",
+    x = "Temperature",
+    y = "Gas Consumption"
+  ) +
+  theme_bw()
+```
+
+This faceted plot compares how temperature relates to gas consumption across households, industry, and power stations. The household sector appears to be most clearly associated with temperature, while the other two sectors show weaker or different patterns.
+
+#### Figure 5: Seasonal effects during the crisis period
+
+```{r}
+daily %>%
+  filter(date >= as.Date("2021-09-01"),
+         date <= as.Date("2022-10-31")) %>%
+  mutate(month_name = month(date, label = TRUE, abbr = TRUE)) %>%
+  ggplot(aes(x = month_name, y = consumption_small)) +
+  geom_boxplot(fill = "lightgreen") +
+  labs(
+    title = "Seasonal Pattern of Household Consumption During the Crisis",
+    x = "Month",
+    y = "Household Gas Consumption"
+  ) +
+  theme_bw()
+```
+
+This boxplot shows that household gas consumption still followed a seasonal pattern during the crisis period. Consumption was generally higher in colder months and lower in warmer months, suggesting that seasonality remained important even during the energy crisis.
 
 ### Objective 2
 
 * Compare and contrast holidays and non-holidays for household energy consumption. Select 3 ways of comparing these groups. Provide at least one graph.
+
+To compare holidays and non-holidays for household energy consumption, I use three approaches: a comparison of means, a comparison of medians, and a graphical comparison of distributions.
+
+```{r}
+holiday_summary <- daily %>%
+  mutate(day_type = if_else(holiday == 1, "Holiday", "Non-Holiday")) %>%
+  group_by(day_type) %>%
+  summarise(
+    mean_small = mean(consumption_small, na.rm = TRUE),
+    median_small = median(consumption_small, na.rm = TRUE),
+    sd_small = sd(consumption_small, na.rm = TRUE),
+    n = n()
+  )
+
+holiday_summary
+```
+
+The table above shows that holidays and non-holidays differ in their average and median household gas consumption. This provides a first numerical comparison of the two groups.
+
+```{r}
+daily %>%
+  mutate(day_type = if_else(holiday == 1, "Holiday", "Non-Holiday")) %>%
+  ggplot(aes(x = day_type, y = consumption_small)) +
+  geom_boxplot(fill = "plum") +
+  labs(
+    title = "Household Consumption on Holidays and Non-Holidays",
+    x = "Day Type",
+    y = "Household Gas Consumption"
+  ) +
+  theme_bw()
+```
+
+This boxplot compares the overall distributions of household gas consumption for holidays and non-holidays. It allows us to compare not only center but also spread and outliers.
+
+```{r}
+daily %>%
+  mutate(
+    day_type = if_else(holiday == 1, "Holiday", "Non-Holiday"),
+    above_overall_median = consumption_small > median(consumption_small, na.rm = TRUE)
+  ) %>%
+  group_by(day_type) %>%
+  summarise(prop_above_median = mean(above_overall_median, na.rm = TRUE))
+```
+
+A third comparison is the proportion of days in each group with household consumption above the overall median. Together, these results suggest that holidays and non-holidays differ somewhat in household usage patterns, although the difference is not as large as the effect of temperature.
 
 ### Objective 3
 
 * According to the paper, the gas crisis occurred between September 2021 until October 2022. Compare this period with the periods before and after on household and industrial consumption. Write a paragraph explaining your findings.
 
 
+```{r}
+daily_period <- daily %>%
+  mutate(
+    crisis_period = case_when(
+      date < as.Date("2021-09-01") ~ "Before Crisis",
+      date <= as.Date("2022-10-31") ~ "During Crisis",
+      TRUE ~ "After Crisis"
+    )
+  )
+
+daily_period %>%
+  group_by(crisis_period) %>%
+  summarise(
+    mean_household = mean(consumption_small, na.rm = TRUE),
+    mean_industry = mean(consumption_industry, na.rm = TRUE),
+    median_household = median(consumption_small, na.rm = TRUE),
+    median_industry = median(consumption_industry, na.rm = TRUE),
+    n = n()
+  )
+```
+
+```{r}
+daily_period %>%
+  select(date, crisis_period, consumption_small, consumption_industry) %>%
+  pivot_longer(
+    cols = c(consumption_small, consumption_industry),
+    names_to = "sector",
+    values_to = "consumption"
+  ) %>%
+  mutate(
+    sector = recode(
+      sector,
+      consumption_small = "Households",
+      consumption_industry = "Industry"
+    )
+  ) %>%
+  ggplot(aes(x = crisis_period, y = consumption, fill = crisis_period)) +
+  geom_boxplot() +
+  facet_wrap(~ sector, scales = "free_y") +
+  labs(
+    title = "Consumption Before, During, and After the Crisis",
+    x = "Period",
+    y = "Gas Consumption"
+  ) +
+  theme_bw() +
+  theme(legend.position = "none")
+```
+
+The summary table and boxplots show meaningful differences across the three periods. Household and industrial consumption both tend to be lower during the crisis than before the crisis, which is consistent with the paper's claim that Germany reduced natural gas use during the energy crisis. The reduction appears especially notable for industry, suggesting that industrial users may have responded more quickly or more strongly to higher prices and supply concerns. Household consumption also declines during the crisis, but weather and seasonality still play a large role, so the change is somewhat less visually sharp than in industry.
+
+
 ### Objective 4
 
 * Explore the [documentation for ggplot](https://ggplot2.tidyverse.org/). Select one geometery and one `stat_` function we have not used before or use an option to a previously used geometry/stat with a new option. Write a short paragraph explaining what the plots show. 
 
-### Objective 4
+```{r}
+ggplot(daily, aes(x = consumption_small)) +
+  geom_density(fill = "skyblue", alpha = 0.5) +
+  labs(
+    title = "Density Plot of Household Gas Consumption",
+    x = "Household Gas Consumption",
+    y = "Density"
+  ) +
+  theme_bw()
+```
+
+```{r}
+daily %>%
+  mutate(day_type = if_else(holiday == 1, "Holiday", "Non-Holiday")) %>%
+  ggplot(aes(x = day_type, y = consumption_small)) +
+  stat_summary(fun = mean, geom = "bar") +
+  labs(
+    title = "Mean Household Consumption by Day Type",
+    x = "Day Type",
+    y = "Mean Household Gas Consumption"
+  ) +
+  theme_bw()
+```
+
+The density plot gives a smoother view of the distribution than a histogram and makes the overall shape of household consumption easier to see. The stat_summary() plot directly emphasizes the mean for holidays and non-holidays, which is useful when the goal is to compare group averages rather than the full distribution.
+
+### Objective 5
 
 * Investigate solar radiation's marginal distribution and also it's relationship with temperature.
 
+```{r}
+ggplot(daily, aes(x = solar_radiation)) +
+  geom_histogram(bins = 30, fill = "gold", color = "white") +
+  labs(
+    title = "Distribution of Solar Radiation",
+    x = "Solar Radiation",
+    y = "Count"
+  ) +
+  theme_bw()
+```
+
+```{r}
+ggplot(daily, aes(x = temperature, y = solar_radiation)) +
+  geom_point(alpha = 0.35) +
+  geom_smooth(method = "loess", se = FALSE) +
+  labs(
+    title = "Solar Radiation and Temperature",
+    x = "Temperature",
+    y = "Solar Radiation"
+  ) +
+  theme_bw()
+```
+
+The first plot shows the marginal distribution of solar radiation, which is concentrated at lower to moderate values with a tail toward higher values. The second plot shows that solar radiation and temperature are positively related overall, although the relationship is not perfectly linear.
 
 ### Objective 5
 
 * Use `group_by` to summarize by a new feature of this data set not otherwise discussed in the tasks or objectives. What have you learned with these investigation?
 
+```{r}
+weekday_summary <- daily %>%
+  mutate(weekday = wday(date, label = TRUE, abbr = FALSE)) %>%
+  group_by(weekday) %>%
+  summarise(
+    mean_household = mean(consumption_small, na.rm = TRUE),
+    mean_industry = mean(consumption_industry, na.rm = TRUE),
+    mean_power = mean(consumption_power, na.rm = TRUE)
+  ) %>%
+  arrange(desc(mean_household))
+
+weekday_summary
+```
+
+```{r}
+daily %>%
+  mutate(weekday = wday(date, label = TRUE, abbr = FALSE)) %>%
+  group_by(weekday) %>%
+  summarise(mean_household = mean(consumption_small, na.rm = TRUE)) %>%
+  ggplot(aes(x = weekday, y = mean_household)) +
+  geom_col(fill = "tomato") +
+  labs(
+    title = "Mean Household Consumption by Day of Week",
+    x = "Day of Week",
+    y = "Mean Household Gas Consumption"
+  ) +
+  theme_bw()
+```
+
+Grouping by weekday suggests that consumption is not identical across all days of the week. This may reflect differences in routines, work schedules, and household activity patterns.
+
+
 ### Objective 6
 
 * Based on your exploration of the data, suggest three questions that could be asked from these data or additional data that you can imagine. Be sure to explain why the previous plots or calculations indicates that this would be an interesting our useful exploration.
 
+1. How quickly did households and industry respond to increases in gas prices?
+
+The earlier plots suggest that consumption changes over time and may be related to changes in market conditions. This could show whether consumers reduced usage immediately or only after price stayed high.
+
+2. Did especially cold periods weaken the overall reduction in gas use during the crisis?
+
+Since Temperature is strongly related to household consumptions, it would be useful to examine this.
+
+3. Were some industrial sectors more responsive than others to the energy crisis?
+
+The dataset contains several index variables by sector. Additional data or a deeper analysis could reveal whether certain industries cut their gas demand more aggressively than others, which would help explain how overall industrial savings were achieved.
+
 ### Objective 7
 
 * Write an abstract for your project. Briefly explain what you did, what you found, and why a potential reader should be interested in your research.
+
+## Abstract
+
+In this project, we explore daily natural gas consumption in Germany alongside Dutch TTF gas prices during the 2022 energy crisis. We analyze household, industrial, and power station consumption, examine missing data, and use visualizations to study trends over time.
+
+We find that household gas consumption is highly dependent on temperature, with much higher usage during colder periods. We also observe differences between holidays and non-holidays, as well as clear seasonal patterns.
+
+These results suggest that energy consumption is shaped by a combination of weather, human behavior, and market conditions.
 
