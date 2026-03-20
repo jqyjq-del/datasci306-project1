@@ -526,7 +526,7 @@ ggplot(daily, aes(x = temperature, y = solar_radiation)) +
 
 The first plot shows the marginal distribution of solar radiation, which is concentrated at lower to moderate values with a tail toward higher values. The second plot shows that solar radiation and temperature are positively related overall, although the relationship is not perfectly linear.
 
-### Objective 5
+### Objective 6
 
 * Use `group_by` to summarize by a new feature of this data set not otherwise discussed in the tasks or objectives. What have you learned with these investigation?
 
@@ -562,7 +562,7 @@ daily %>%
 Grouping by weekday suggests that consumption is not identical across all days of the week. This may reflect differences in routines, work schedules, and household activity patterns.
 
 
-### Objective 6
+### Objective 7
 
 * Based on your exploration of the data, suggest three questions that could be asked from these data or additional data that you can imagine. Be sure to explain why the previous plots or calculations indicates that this would be an interesting our useful exploration.
 
@@ -578,7 +578,7 @@ Since Temperature is strongly related to household consumptions, it would be use
 
 The dataset contains several index variables by sector. Additional data or a deeper analysis could reveal whether certain industries cut their gas demand more aggressively than others, which would help explain how overall industrial savings were achieved.
 
-### Objective 7
+### Objective 8
 
 * Write an abstract for your project. Briefly explain what you did, what you found, and why a potential reader should be interested in your research.
 
