@@ -1,6 +1,6 @@
 ---
 title: "Project 1"
-author: "GROUP MEMBERS"
+author: "Jiaqi Yang, Benjamin Leto, and Berenice Guzman"
 output:
   pdf_document: default
   html_document: default
